@@ -1,0 +1,19 @@
+{
+  "name": "andersundsehr/redirects-expoter",
+  "type": "typo3-cms-extension",
+  "description": "anders und sehr: Redirects Exporter - Exports your redirect to nginx rewrites",
+  "homepage": "https://www.andersundsehr.com",
+  "license": "GPL-3.0-or-later",
+  "support": {
+    "source": "https://www.andersundsehr.com"
+  },
+  "autoload": {
+    "psr-4": {
+      "AUS\\AusRedirectsExporter\\": "Classes/"
+    }
+  },
+  "require": {
+    "typo3/cms-core": "^10.4",
+    "spatie/async": "^1.5"
+  }
+}

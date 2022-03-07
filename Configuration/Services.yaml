@@ -1,0 +1,20 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+  AUS\AusRedirectsExporter\Command\ExportCommand:
+    tags:
+      - name: 'console.command'
+        command: 'andersundsehr:redirects-expoter:export'
+        description: 'Curls all sys_redirect rows and puts results to column tx_ausredirects_exporter_resolved'
+  AUS\AusRedirectsExporter\Command\WriterCommand:
+    tags:
+      - name: 'console.command'
+        command: 'andersundsehr:redirects-expoter:writer'
+        description: 'Writes the content of sys_redirect tx_ausredirects_exporter_resolved to a file'
+  AUS\AusRedirectsExporter\Command\ClearCommand:
+    tags:
+      - name: 'console.command'
+        command: 'andersundsehr:redirects-expoter:clear'
+        description: 'Resets all sys_redirect tx_ausredirects_exporter_resolved'
