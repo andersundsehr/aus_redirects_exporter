@@ -13,7 +13,6 @@
     }
   },
   "require": {
-    "typo3/cms-core": "^10.4",
-    "spatie/async": "^1.5"
+    "typo3/cms-core": "^10.4"
   }
 }
