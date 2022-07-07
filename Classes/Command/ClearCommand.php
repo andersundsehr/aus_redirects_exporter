@@ -28,9 +28,9 @@ class ClearCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $connection = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable('sys_redirect');
-        $qb = $connection->createQueryBuilder();
+        $queryBuilder = $connection->createQueryBuilder();
         $columnName = 'tx_ausredirects_exporter_resolved';
-        $qb->update('sys_redirect')->set($columnName, null)->execute();
+        $queryBuilder->update('sys_redirect')->set($columnName, null)->execute();
 
         return Command::SUCCESS;
     }

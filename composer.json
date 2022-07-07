@@ -12,6 +12,11 @@
       "AUS\\AusRedirectsExporter\\": "Classes/"
     }
   },
+  "extra": {
+    "typo3/cms": {
+      "extension-key": "redirects_expoter"
+    }
+  },
   "require": {
     "typo3/cms-core": "^10.4"
   }

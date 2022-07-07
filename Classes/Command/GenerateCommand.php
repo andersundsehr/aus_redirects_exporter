@@ -4,29 +4,31 @@ declare(strict_types=1);
 
 namespace AUS\AusRedirectsExporter\Command;
 
+use AUS\AusRedirectsExporter\Domain\Repository\RedirectRepository;
 use Exception;
 use GuzzleHttp\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Http\ServerRequestFactory;
+use TYPO3\CMS\Core\Site\Entity\NullSite;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 use TYPO3\CMS\Core\Utility\HttpUtility;
 use TYPO3\CMS\Frontend\Authentication\FrontendUserAuthentication;
 use TYPO3\CMS\Redirects\Service\RedirectService;
 
-class ExportCommand extends Command
+class GenerateCommand extends Command
 {
     protected RedirectService $redirectService;
 
     public function __construct(RedirectService $redirectService)
     {
-        parent::__construct('andersundsehr:redirects:exporter');
+        parent::__construct('andersundsehr:redirects:generate');
         $this->redirectService = $redirectService;
     }
 
@@ -46,23 +48,32 @@ class ExportCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        $connection = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable('sys_redirect');
         $siteFinder = GeneralUtility::makeInstance(SiteFinder::class);
         $sites = $siteFinder->getAllSites();
-        $qb = $connection->createQueryBuilder();
-        $res = $qb->select('*')->from('sys_redirect')->execute();
-        $io = new SymfonyStyle($input, $output);
-        $io->progressStart($res->rowCount());
-        while ($row = $res->fetchAssociative()) {
-            $io->progressAdvance();
+        $redirectRepository = GeneralUtility::makeInstance(RedirectRepository::class);
+        $redirects = $redirectRepository->findForExport();
+        $io = $output;
+        if ($output instanceof ConsoleOutputInterface) {
+            $io = new SymfonyStyle($input, $output);
+            $io->progressStart($redirects->rowCount());
+        }
+        foreach ($redirects as $row) {
+            if ($io instanceof SymfonyStyle) {
+                $io->progressAdvance();
+            }
             if ($row['tx_ausredirects_exporter_resolved']) {
                 /** @noinspection JsonEncodingApiUsageInspection */
                 $stuff = json_decode($row['tx_ausredirects_exporter_resolved'], true);
                 if ($stuff && $stuff['updatedon'] === $row['updatedon']) {
+                    $io->writeln(sprintf("no update needed for %d", $row['uid']), OutputInterface::VERBOSITY_DEBUG);
                     continue;
                 }
             }
             if ($row['respect_query_parameters']) {
+                $io->writeln(
+                    sprintf("redirect %d has respect_query_parameters enabled (not supported)", $row['uid']),
+                    OutputInterface::OUTPUT_NORMAL
+                );
                 continue;
             }
 
@@ -83,10 +94,19 @@ class ExportCommand extends Command
             );
 
             if (!$matchedRedirect) {
+                $io->writeln(sprintf("cloud not match redirect %d", $row['uid']), OutputInterface::VERBOSITY_VERBOSE);
                 continue;
             }
 
+            if ($matchedRedirect['uid'] !== $row['uid']) {
+                $io->writeln(
+                    sprintf("matched redirect %d not the same as row %d", $matchedRedirect['uid'], $row['uid']),
+                    OutputInterface::OUTPUT_NORMAL
+                );
+            }
+
             if ($matchedRedirect['is_regexp'] ?? false) {
+                $io->writeln(sprintf("redirect is regexp %d (not supported)", $matchedRedirect['uid']), OutputInterface::OUTPUT_NORMAL);
                 continue;
             }
 
@@ -94,7 +114,7 @@ class ExportCommand extends Command
             $_SERVER['HTTP_HOST'] = $requestUri->getHost();
             $GLOBALS['TYPO3_REQUEST'] = ServerRequestFactory::fromGlobals();
 
-            $site = null;
+            $site = new NullSite();
             foreach ($sites as $siteCandidate) {
                 if ($siteCandidate->getBase()->getHost() === $requestUri->getHost()) {
                     $site = $siteCandidate;
@@ -106,9 +126,13 @@ class ExportCommand extends Command
             try {
                 $redirectUri = $this->redirectService->getTargetUrl($matchedRedirect, [], $frontendUser, $requestUri, $site);
                 if (null === $redirectUri) {
+                    $io->writeln(
+                        sprintf("cloud not getTargetUrl for redirect %d", $matchedRedirect['uid']),
+                        OutputInterface::VERBOSITY_VERBOSE
+                    );
                     continue;
                 }
-                if (!$redirectUri->getHost()) {
+                if (!$redirectUri->getHost() && $requestUri->getHost() !== '*') {
                     $redirectUri = $redirectUri->withHost($requestUri->getHost())->withScheme($requestUri->getScheme())->withPort($requestUri->getPort());
                 }
             } catch (Exception $exception) {
@@ -117,6 +141,10 @@ class ExportCommand extends Command
             }
 
             if (($redirectUri instanceof UriInterface) && $this->redirectUriWillRedirectToCurrentUri($requestUri, $redirectUri)) {
+                $io->writeln(
+                    sprintf("redirectUriWillRedirectToCurrentUri redirect %d", $matchedRedirect['uid']),
+                    OutputInterface::VERBOSITY_VERBOSE
+                );
                 continue;
             }
 
@@ -129,18 +157,20 @@ class ExportCommand extends Command
 
             $location = (string)$redirectUri;
             $args = $row['keep_query_parameters'] ? '' : '?';
-            $line = 'rewrite (?i)^' . $requestUri->getPath() . '$ ' . $this->quote($location . $args) . ' ' . ($row['target_statuscode'] === 302 ? 'redirect' : 'permanent') . ';' . PHP_EOL;
+            $option = $row['target_statuscode'] === 302 ? 'redirect' : 'permanent';
+            $destination = $this->quote($location . $args);
+            $line = 'rewrite (?i)^' . $this->sanitizePathForLine($requestUri->getPath()) . '$ ' . $destination . ' ' . $option . ';'. PHP_EOL;
             $result = [
                 'updatedon' => $row['updatedon'],
                 'location' => $location,
                 'line' => $line,
             ];
-            /** @noinspection JsonEncodingApiUsageInspection */
-            $connection->executeQuery(
-                'UPDATE sys_redirect SET ' . 'tx_ausredirects_exporter_resolved' . '=' . $connection->quote(json_encode($result)) . ' WHERE uid=' . $row['uid']
-            );
+
+            $redirectRepository->setResolved((int)$row['uid'], $result);
         }
-        $io->progressFinish();
+        if ($io instanceof SymfonyStyle) {
+            $io->progressFinish();
+        }
         return Command::SUCCESS;
     }
 
@@ -215,5 +245,13 @@ class ExportCommand extends Command
     {
         $line = str_replace('"', '\"', $line);
         return '"' . $line . '"';
+    }
+
+    protected function sanitizePathForLine(string $str): string
+    {
+        $str = urlencode($str);
+        $str = preg_quote($str);
+        $str = str_replace(';', '\;', $str);
+        return $str;
     }
 }

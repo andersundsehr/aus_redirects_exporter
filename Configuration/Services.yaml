@@ -3,10 +3,10 @@ services:
     autowire: true
     autoconfigure: true
     public: false
-  AUS\AusRedirectsExporter\Command\ExportCommand:
+  AUS\AusRedirectsExporter\Command\GenerateCommand:
     tags:
       - name: 'console.command'
-        command: 'andersundsehr:redirects-expoter:export'
+        command: 'andersundsehr:redirects-expoter:generate'
         description: 'Curls all sys_redirect rows and puts results to column tx_ausredirects_exporter_resolved'
   AUS\AusRedirectsExporter\Command\WriterCommand:
     tags:
