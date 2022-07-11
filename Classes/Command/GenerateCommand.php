@@ -249,7 +249,6 @@ class GenerateCommand extends Command
 
     protected function sanitizePathForLine(string $str): string
     {
-        $str = urlencode($str);
         $str = preg_quote($str);
         $str = str_replace(';', '\;', $str);
         return $str;
