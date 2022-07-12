@@ -48,6 +48,22 @@ class GenerateCommand extends Command
      */
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $backup['HTTP_HOST'] = $_SERVER['HTTP_HOST'];
+        $backup['TYPO3_REQUEST'] = $GLOBALS['TYPO3_REQUEST'];
+        try {
+            return $this->internalExecute($input, $output);
+        } finally {
+            $_SERVER['HTTP_HOST'] = $backup['HTTP_HOST'];
+            $GLOBALS['TYPO3_REQUEST'] = $backup['TYPO3_REQUEST'];
+        }
+    }
+
+    /**
+     * @throws \Doctrine\DBAL\Driver\Exception
+     * @throws \Doctrine\DBAL\Exception
+     */
+    private function internalExecute(InputInterface $input, OutputInterface $output): int
+    {
         $siteFinder = GeneralUtility::makeInstance(SiteFinder::class);
         $sites = $siteFinder->getAllSites();
         $redirectRepository = GeneralUtility::makeInstance(RedirectRepository::class);
@@ -159,7 +175,7 @@ class GenerateCommand extends Command
             $args = $row['keep_query_parameters'] ? '' : '?';
             $option = $row['target_statuscode'] === 302 ? 'redirect' : 'permanent';
             $destination = $this->quote($location . $args);
-            $line = 'rewrite (?i)^' . $this->sanitizePathForLine($requestUri->getPath()) . '$ ' . $destination . ' ' . $option . ';'. PHP_EOL;
+            $line = 'rewrite (?i)^' . $this->sanitizePathForLine($requestUri->getPath()) . '$ ' . $destination . ' ' . $option . ';' . PHP_EOL;
             $result = [
                 'updatedon' => $row['updatedon'],
                 'location' => $location,
