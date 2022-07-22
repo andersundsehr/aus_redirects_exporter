@@ -166,7 +166,7 @@ class GenerateCommand extends Command
 
             if ($this->isForceTrailingSlash($input)) {
                 $path = $redirectUri->getPath();
-                if ($path !== '' && substr($path, -1) !== '/') {
+                if ($path !== '' && substr($path, -1) !== '/' && !preg_match('@\/[^\/]+\.[^\/]+$@', $path)) {
                     $redirectUri = $redirectUri->withPath($path . '/');
                 }
             }
