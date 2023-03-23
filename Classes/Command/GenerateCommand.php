@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\ConsoleOutputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use TYPO3\CMS\Core\Core\SystemEnvironmentBuilder;
 use TYPO3\CMS\Core\Http\ServerRequestFactory;
 use TYPO3\CMS\Core\Site\Entity\NullSite;
 use TYPO3\CMS\Core\Site\SiteFinder;
@@ -127,20 +128,16 @@ class GenerateCommand extends Command
             }
 
             GeneralUtility::flushInternalRuntimeCaches();
-            $_SERVER['HTTP_HOST'] = $requestUri->getHost();
-            $GLOBALS['TYPO3_REQUEST'] = ServerRequestFactory::fromGlobals();
-
-            $site = new NullSite();
-            foreach ($sites as $siteCandidate) {
-                if ($siteCandidate->getBase()->getHost() === $requestUri->getHost()) {
-                    $site = $siteCandidate;
-                    break;
-                }
-            }
             $frontendUser = GeneralUtility::makeInstance(FrontendUserAuthentication::class);
             $frontendUser->start();
+
+            $_SERVER['HTTP_HOST'] = $requestUri->getHost();
+            $typo3Request = ServerRequestFactory::fromGlobals()
+                ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_FE)
+                ->withAttribute('frontend.user', $frontendUser);
+
             try {
-                $redirectUri = $this->redirectService->getTargetUrl($matchedRedirect, [], $frontendUser, $requestUri, $site);
+                $redirectUri = $this->redirectService->getTargetUrl($matchedRedirect, $typo3Request);
                 if (null === $redirectUri) {
                     $io->writeln(
                         sprintf("cloud not getTargetUrl for redirect %d", $matchedRedirect['uid']),
