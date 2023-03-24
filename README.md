@@ -13,3 +13,11 @@ If you start the job again it will try to solve all entries which are null or ol
 
 # Future
 - we plan to export the entries to a configurable file included in nginx directly
+
+# with ♥️ from anders und sehr GmbH
+
+> If something did not work 😮  
+> or you appreciate this Extension 🥰 let us know.
+
+> We are hiring https://www.andersundsehr.com/karriere/
+
