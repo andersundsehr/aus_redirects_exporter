@@ -128,10 +128,10 @@ class GenerateCommand extends Command
             }
 
             GeneralUtility::flushInternalRuntimeCaches();
+            $_SERVER['HTTP_HOST'] = $requestUri->getHost();
             $frontendUser = GeneralUtility::makeInstance(FrontendUserAuthentication::class);
             $frontendUser->start();
 
-            $_SERVER['HTTP_HOST'] = $requestUri->getHost();
             $typo3Request = ServerRequestFactory::fromGlobals()
                 ->withAttribute('applicationType', SystemEnvironmentBuilder::REQUESTTYPE_FE)
                 ->withAttribute('frontend.user', $frontendUser);
