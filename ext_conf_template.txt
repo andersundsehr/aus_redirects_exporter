@@ -1,0 +1,8 @@
+# cat=General; type=string; label=Directory where the redirects resist
+directory = compose/nginx-assets/automated-redirects/
+
+# cat=General; type=string; label=Temporary folder while extension tests the redirects
+directoryNew = compose/nginx-assets/automated-redirects-new/
+
+# cat=General; type=boolean; label=Folder where the previous redirects are moved to
+directoryOld = compose/nginx-assets/automated-redirects-old/
