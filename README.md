@@ -11,6 +11,16 @@ If you want to clear the column to recreate all sys_redirect.tx_ausredirects_exp
 
 If you start the job again it will try to solve all entries which are null or old
 
+## Configuration
+
+The configuration needs three places which do not exist yet or which are empty. That means the extension *clears all files* in the desired directories!
+
+The directory will contain the final rules which can include in nginx.
+
+The directoryNew and directoryOld will contain temporary data.
+
+Also the directorys need to be moveable, which may cause problems over partitions/docker volumes.
+
 # Future
 - we plan to export the entries to a configurable file included in nginx directly
 
