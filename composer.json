@@ -1,5 +1,5 @@
 {
-  "name": "andersundsehr/redirects-expoter",
+  "name": "andersundsehr/redirects-exporter",
   "type": "typo3-cms-extension",
   "description": "anders und sehr: Redirects Exporter - Exports your redirect to nginx rewrites",
   "homepage": "https://www.andersundsehr.com",
@@ -14,7 +14,7 @@
   },
   "extra": {
     "typo3/cms": {
-      "extension-key": "redirects_expoter"
+      "extension-key": "redirects_exporter"
     }
   },
   "require": {
