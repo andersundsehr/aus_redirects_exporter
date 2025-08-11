@@ -67,6 +67,11 @@ class GenerateCommand extends Command
     {
         $siteFinder = GeneralUtility::makeInstance(SiteFinder::class);
         $sites = $siteFinder->getAllSites();
+        if (!$sites) {
+            $output->writeln('No sites found, exiting', OutputInterface::VERBOSITY_NORMAL);
+            return Command::FAILURE;
+        }
+        $defaultHost = array_shift($sites)->getBase()->getHost();
         $redirectRepository = GeneralUtility::makeInstance(RedirectRepository::class);
         $redirects = $redirectRepository->findForExport();
         $io = $output;
@@ -127,8 +132,12 @@ class GenerateCommand extends Command
                 continue;
             }
 
+            $host = $requestUri->getHost();
+            if ($host === '*') {
+                $host = $defaultHost;
+            }
             GeneralUtility::flushInternalRuntimeCaches();
-            $_SERVER['HTTP_HOST'] = $requestUri->getHost();
+            $_SERVER['HTTP_HOST'] = $host;
             $frontendUser = GeneralUtility::makeInstance(FrontendUserAuthentication::class);
             $frontendUser->start();
 
